@@ -24,8 +24,8 @@
 #include <Logging/Logger.h>
 #include <Renderers/IRenderNode.h>
 #include <Renderers/RenderStateNode.h>
-#include <Renderers/OpenGL/Renderer.h>
-#include <Renderers/OpenGL/RenderingView.h>
+//#include <Renderers/OpenGL/Renderer.h>
+//#include <Renderers/OpenGL/RenderingView.h>
 #include <Resources/IModelResource.h>
 #include <Resources/File.h>
 #include <Resources/GLSLResource.h>
@@ -43,7 +43,9 @@
 #include <Scene/QuadTransformer.h>
 #include <Scene/BSPTransformer.h>
 #include <Scene/ASDotVisitor.h>
+#include <Scene/VertexArrayTransformer.cpp>
 #include <Renderers/AcceleratedRenderingView.h>
+#include <Renderers/Renderer.h>
 
 // from FixedTimeStepPhysics
 #include <Physics/FixedTimeStepPhysics.h>
@@ -57,25 +59,12 @@
 
 // Additional namespaces (others are in the header).
 using namespace OpenEngine::Devices;
-using namespace OpenEngine::Renderers::OpenGL;
+//using namespace OpenEngine::Renderers::OpenGL;
 using namespace OpenEngine::Renderers;
 using namespace OpenEngine::Resources;
 using namespace OpenEngine::Utils;
 using namespace OpenEngine::Physics;
 
-// composite rendering view. Uses RenderingView for drawing and
-// AcceleratedRenderingView for clipping. 
-class MyRenderingView : 
-    public RenderingView,
-    public AcceleratedRenderingView {
-public:
-    MyRenderingView(Viewport& viewport) :
-        IRenderingView(viewport),
-        RenderingView(viewport),
-        AcceleratedRenderingView(viewport) {
-
-    }
-};
 
 /**
  * Factory constructor.
@@ -86,7 +75,7 @@ public:
 GameFactory::GameFactory() {
 
     // Create a frame and viewport.
-    this->frame = new SDLFrame(800, 600, 32);
+    this->frame = new SDLFrame(1024, 768, 32);
 
     // Main viewport
     viewport = new Viewport(*frame);
@@ -95,7 +84,7 @@ GameFactory::GameFactory() {
     this->renderer = new Renderer();
 
     // Add a rendering view to the renderer
-    this->renderer->AddRenderingView(new MyRenderingView(*viewport));
+    this->renderer->AddRenderingView(new AcceleratedRenderingView(*viewport));
 }
 
 /**
@@ -265,6 +254,7 @@ bool GameFactory::SetupEngine(IGameEngine& engine) {
         dot.Write(*hybridTreeRoot, &dotfile);
         logger.info << "Saved physics graph to 'physics.dot'" << logger.end;
     }
+    
     FixedTimeStepPhysics* physic = new FixedTimeStepPhysics( hybridTreeRoot );
 
     // Add FixedTimeStepPhysics module
@@ -277,6 +267,16 @@ bool GameFactory::SetupEngine(IGameEngine& engine) {
     quadT.SetMaxQuadSize(100);
     quadT.Transform(*staticObjects);
     rNode->AddNode(staticObjects);
+
+    // Replace all GeometryNodes with VertexArrayNodes
+    VertexArrayTransformer vat;
+    vat.Transform(*rNode);
+ 
+    ofstream out("vertex_array.dot", ios::out); // create output file
+    ASDotVisitor dot;                        // create dot visitor
+    dot.Write(*rNode, &out);           // build and write the graph
+    out.close();                       // close your file
+    
     logger.info << "Preprocessing of static tree: done" << logger.end;
 
     // Visualization of the frustum

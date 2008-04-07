@@ -30,5 +30,6 @@ TARGET_LINK_LIBRARIES(OERacer
   # Extensions
   Extensions_SDL
   Extensions_FixedTimeStepPhysics
+  Extensions_AccelerationStructures
   ${BOOST_SERIALIZATION_LIB}
 )
